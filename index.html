@@ -351,7 +351,7 @@
   <main class="app">
     <section class="hero">
       <div class="hero-main">
-        <div class="label">✉️ Mail KPI Dashboard • test version</div>
+        <div class="label">✉️ Mail KPI Dashboard • dev counters version</div>
         <h1>Mail KPI Calculator</h1>
         <p class="hero-text">
           Калькулятор считает KPI почтовика по итогам месяца: закрытые письма, фактические часы на почте, часы на расширения, dev-баллы и уровень ошибок.
@@ -467,21 +467,24 @@
             <input id="devHours" type="number" min="0" step="0.5" value="12" />
           </div>
           <div class="field">
-            <label for="devPoints">Dev points</label>
-            <input id="devPoints" type="number" min="0" max="3" step="1" value="3" />
+            <label for="newExtensions">New useful extensions × 3 points</label>
+            <input id="newExtensions" type="number" min="0" step="1" value="1" />
           </div>
           <div class="field">
-            <label for="devType">Dev task type</label>
-            <select id="devType">
-              <option>3 балла — новое полезное расширение</option>
-              <option>2 балла — крупная доработка текущего расширения</option>
-              <option>1 балл — средняя доработка / поддержка / фикс</option>
-              <option>Нет dev-задач</option>
-            </select>
+            <label for="majorImprovements">Major improvements × 2 points</label>
+            <input id="majorImprovements" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="mediumFixes">Medium fixes / support × 1 point</label>
+            <input id="mediumFixes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label>Dev points summary</label>
+            <div class="pill-row" id="devPointsSummary"></div>
           </div>
           <div class="field full">
             <label for="devComment">Dev comment</label>
-            <textarea id="devComment" placeholder="Например: новое расширение для контроля времени ответа / фикс бага / крупная доработка..."></textarea>
+            <textarea id="devComment" placeholder="Например: 1 новое расширение, 1 крупная доработка, 2 фикса текущих расширений..."></textarea>
           </div>
         </div>
       </div>
@@ -617,7 +620,12 @@
       const seniorMailOnlyMonthly = seniorMailOnlyHour * mailHours;
 
       const devMode = $('devMode').value;
-      const devPoints = Math.min(3, Math.max(0, num('devPoints')));
+      const newExtensions = Math.max(0, num('newExtensions'));
+      const majorImprovements = Math.max(0, num('majorImprovements'));
+      const mediumFixes = Math.max(0, num('mediumFixes'));
+      const totalDevPoints = newExtensions * 3 + majorImprovements * 2 + mediumFixes;
+      const kpiDevPoints = Math.min(6, totalDevPoints);
+      const devForSenior = kpiDevPoints >= 3;
       const minor = num('minorMistakes');
       const medium = num('mediumMistakes');
       const critical = num('criticalMistakes');
@@ -642,12 +650,12 @@
           reason = `No KPI: закрыто ${fmt(closedMails)} писем, это ниже Junior target ${fmt(juniorMonthly)}.`;
         }
       } else {
-        if (closedMails >= seniorMonthly && devPoints >= 3 && mailHours > 0) {
+        if (closedMails >= seniorMonthly && devForSenior && mailHours > 0) {
           gradeIndex = 3;
-          reason = `Senior: выполнен Senior mail target ${fmt(seniorMonthly)} и набрано ${devPoints}/3 dev points.`;
-        } else if (closedMails >= middleMonthly && devPoints >= 1 && mailHours > 0) {
+          reason = `Senior: выполнен Senior mail target ${fmt(seniorMonthly)} и dev-часть закрыта: ${fmt(kpiDevPoints)}/6 зачётных points (${fmt(totalDevPoints)} earned).`;
+        } else if (closedMails >= middleMonthly && kpiDevPoints >= 1 && mailHours > 0) {
           gradeIndex = 2;
-          reason = `Middle: выполнен Middle mail target ${fmt(middleMonthly)} и есть dev-вклад ${devPoints}/3 points.`;
+          reason = `Middle: выполнен Middle mail target ${fmt(middleMonthly)} и есть dev-вклад ${fmt(kpiDevPoints)}/6 зачётных points.`;
         } else if (closedMails >= juniorMonthly && mailHours > 0) {
           gradeIndex = 1;
           reason = `Junior: выполнен Junior mail target ${fmt(juniorMonthly)}. Для более высокого грейда не хватает почты и/или dev points.`;
@@ -703,6 +711,12 @@
         <span class="pill">Senior mail-only: ${fmt(seniorMailOnlyHour, 2)} mails/h</span>
       `;
 
+      $('devPointsSummary').innerHTML = `
+        <span class="pill">Earned: ${fmt(totalDevPoints)}</span>
+        <span class="pill">KPI counted: ${fmt(kpiDevPoints)}/6</span>
+        <span class="pill">Senior needs: 3+</span>
+      `;
+
       $('finalGrade').textContent = grade;
       $('finalGrade').className = `grade ${gradeIndex === 3 ? 'good' : gradeIndex === 2 ? 'accent' : gradeIndex === 1 ? 'warn' : 'bad'}`;
       $('finalBonus').textContent = `$${bonus}`;
@@ -712,7 +726,7 @@
         <span class="pill">Closed: ${fmt(closedMails)}</span>
         <span class="pill">Mail hours: ${fmt(mailHours, 1)}</span>
         <span class="pill">Speed: ${fmt(mailsPerHour, 2)} mails/h</span>
-        <span class="pill">Dev: ${devPoints}/3 points</span>
+        <span class="pill">Dev: ${fmt(kpiDevPoints)}/6 counted</span>
         <span class="pill">Minor/Medium/Critical: ${minor}/${medium}/${critical}</span>
       `;
     }
@@ -730,7 +744,9 @@
       $('manualMailHours').value = '';
       $('devMode').value = 'withDev';
       $('devHours').value = 12;
-      $('devPoints').value = 3;
+      $('newExtensions').value = 1;
+      $('majorImprovements').value = 0;
+      $('mediumFixes').value = 0;
       $('minorMistakes').value = 0;
       $('mediumMistakes').value = 0;
       $('criticalMistakes').value = 0;
