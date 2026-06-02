@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mail KPI Calculator</title>
+  <style>
+    :root {
+      --bg: #07070a;
+      --bg-2: #0f0b0f;
+      --card: rgba(31, 10, 17, 0.88);
+      --card-2: rgba(18, 14, 18, 0.92);
+      --border: rgba(180, 30, 55, 0.38);
+      --border-soft: rgba(255, 255, 255, 0.08);
+      --text: #f8f3f5;
+      --muted: #b9aeb3;
+      --accent: #d21f3c;
+      --accent-2: #ff3d5a;
+      --good: #22c55e;
+      --warn: #f97316;
+      --bad: #ef4444;
+      --shadow: 0 20px 80px rgba(0, 0, 0, 0.55);
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top left, rgba(210, 31, 60, 0.22), transparent 28%),
+                  radial-gradient(circle at top right, rgba(98, 12, 30, 0.35), transparent 30%),
+                  linear-gradient(135deg, var(--bg), #10070d 55%, #050507);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overscroll-behavior: none;
+    }
+
+    body { padding: 28px; }
+
+    .app {
+      max-width: 1440px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .hero-main, .hero-side, .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(36, 12, 20, 0.94), rgba(12, 10, 13, 0.94));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero-main {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      right: -160px;
+      top: -180px;
+      border-radius: 50%;
+      background: rgba(210, 31, 60, 0.18);
+      filter: blur(2px);
+    }
+
+    .label {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--muted);
+      font-size: 13px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    h1 {
+      margin: 16px 0 8px;
+      font-size: clamp(32px, 5vw, 58px);
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+    }
+
+    .hero-text {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .hero-side {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: space-between;
+    }
+
+    .avatar-wrap {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .avatar {
+      width: 86px;
+      height: 86px;
+      border-radius: 24px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: radial-gradient(circle at 35% 30%, #3a1723, #12090e 68%);
+      display: grid;
+      place-items: center;
+      font-size: 46px;
+      box-shadow: inset 0 0 0 1px rgba(210,31,60,0.2), 0 14px 35px rgba(0,0,0,0.4);
+    }
+
+    .employee-title { font-size: 18px; font-weight: 800; }
+    .employee-subtitle { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+    .money-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .money-box {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.045);
+      border: 1px solid var(--border-soft);
+      padding: 14px;
+    }
+
+    .money-box span { color: var(--muted); font-size: 12px; display: block; }
+    .money-box strong { font-size: 24px; margin-top: 3px; display: block; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+    }
+
+    .card {
+      padding: 20px;
+      background: linear-gradient(145deg, var(--card), var(--card-2));
+    }
+
+    .span-4 { grid-column: span 4; }
+    .span-6 { grid-column: span 6; }
+    .span-8 { grid-column: span 8; }
+    .span-12 { grid-column: span 12; }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .hint { color: var(--muted); font-size: 12px; }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin: 0 0 7px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(5,5,8,0.68);
+      color: var(--text);
+      border-radius: 13px;
+      padding: 12px 13px;
+      outline: none;
+      font: inherit;
+      transition: 0.18s ease;
+    }
+
+    textarea { min-height: 90px; resize: vertical; }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: rgba(255,61,90,0.9);
+      box-shadow: 0 0 0 4px rgba(210,31,60,0.12);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--border-soft);
+      background: rgba(255,255,255,0.04);
+      border-radius: 18px;
+      padding: 15px;
+      min-height: 92px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 26px;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+    }
+
+    .metric small {
+      color: var(--muted);
+      display: block;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    .good { color: var(--good); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .accent { color: var(--accent-2); }
+
+    .result-card {
+      padding: 26px;
+      border: 1px solid rgba(255,61,90,0.45);
+      background: linear-gradient(145deg, rgba(68, 13, 27, 0.92), rgba(16, 10, 14, 0.96));
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+    }
+
+    .result-top {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .grade {
+      font-size: clamp(34px, 4vw, 54px);
+      letter-spacing: -0.06em;
+      margin: 4px 0;
+      font-weight: 900;
+    }
+
+    .bonus {
+      min-width: 170px;
+      text-align: right;
+    }
+
+    .bonus span { color: var(--muted); display: block; font-size: 13px; }
+    .bonus strong { font-size: 46px; letter-spacing: -0.06em; }
+
+    .reason {
+      margin-top: 16px;
+      color: #e9dce1;
+      line-height: 1.55;
+      background: rgba(255,255,255,0.045);
+      border: 1px solid var(--border-soft);
+      padding: 14px 15px;
+      border-radius: 16px;
+    }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-soft);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      border-radius: 13px;
+      padding: 12px 14px;
+      background: linear-gradient(135deg, var(--accent), #891629);
+      color: white;
+      font-weight: 800;
+      box-shadow: 0 12px 28px rgba(210,31,60,0.25);
+    }
+
+    .button-secondary {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-soft);
+      box-shadow: none;
+      color: var(--text);
+    }
+
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+    .footer-note {
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      margin: 18px 0 4px;
+    }
+
+    @media (max-width: 1100px) {
+      .hero { grid-template-columns: 1fr; }
+      .span-4, .span-6, .span-8 { grid-column: span 12; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 14px; }
+      .fields, .metric-grid, .money-grid { grid-template-columns: 1fr; }
+      .result-top { grid-template-columns: 1fr; }
+      .bonus { text-align: left; }
+      .hero-main { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="hero-main">
+        <div class="label">✉️ Mail KPI Dashboard • test version</div>
+        <h1>Mail KPI Calculator</h1>
+        <p class="hero-text">
+          Калькулятор считает KPI почтовика по итогам месяца: закрытые письма, фактические часы на почте, часы на расширения, dev-баллы и уровень ошибок.
+        </p>
+      </div>
+      <aside class="hero-side">
+        <div class="avatar-wrap">
+          <div class="avatar" aria-label="postman cat avatar">🐈‍⬛</div>
+          <div>
+            <div class="employee-title">Mail Support Specialist</div>
+            <div class="employee-subtitle">почта + browser extensions</div>
+          </div>
+        </div>
+        <div class="money-grid">
+          <div class="money-box"><span>Base salary</span><strong>$700</strong></div>
+          <div class="money-box"><span>Max KPI</span><strong>$300</strong></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <div class="card span-4">
+        <div class="card-head">
+          <h2>Month settings</h2>
+          <span class="hint">месяц / график</span>
+        </div>
+        <div class="fields">
+          <div class="field full">
+            <label for="month">Month</label>
+            <input id="month" type="text" value="June 2026" />
+          </div>
+          <div class="field">
+            <label for="workingDays">Working days</label>
+            <input id="workingDays" type="number" min="0" step="1" value="22" />
+          </div>
+          <div class="field">
+            <label for="hoursPerDay">Hours per day</label>
+            <input id="hoursPerDay" type="number" min="1" step="0.5" value="8" />
+          </div>
+          <div class="field">
+            <label for="vacationDays">Vacation days</label>
+            <input id="vacationDays" type="number" min="0" step="0.5" value="0" />
+          </div>
+          <div class="field">
+            <label for="sickDays">Sick leave days</label>
+            <input id="sickDays" type="number" min="0" step="0.5" value="0" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-8">
+        <div class="card-head">
+          <h2>Editable targets</h2>
+          <span class="hint">можно менять после тестового месяца</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="juniorTarget">Junior mails/day</label>
+            <input id="juniorTarget" type="number" min="1" step="1" value="200" />
+          </div>
+          <div class="field">
+            <label for="middleTarget">Middle mails/day</label>
+            <input id="middleTarget" type="number" min="1" step="1" value="230" />
+          </div>
+          <div class="field">
+            <label for="seniorTarget">Senior mails/day</label>
+            <input id="seniorTarget" type="number" min="1" step="1" value="270" />
+          </div>
+          <div class="field">
+            <label for="seniorMailOnlyTarget">Senior mail-only mails/day</label>
+            <input id="seniorMailOnlyTarget" type="number" min="1" step="1" value="290" />
+          </div>
+        </div>
+        <div class="pill-row" id="hourTargets"></div>
+      </div>
+
+      <div class="card span-6">
+        <div class="card-head">
+          <h2>Mail performance</h2>
+          <span class="hint">данные из Helpdesk</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="closedMails">Total closed mails</label>
+            <input id="closedMails" type="number" min="0" step="1" value="5600" />
+          </div>
+          <div class="field">
+            <label for="manualMailHours">Manual mail hours override</label>
+            <input id="manualMailHours" type="number" min="0" step="0.5" placeholder="optional" />
+          </div>
+          <div class="field full">
+            <label>Note</label>
+            <div class="hint">Если поле override пустое, часы почты считаются автоматически: рабочие часы − dev hours.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-6">
+        <div class="card-head">
+          <h2>Dev / extensions</h2>
+          <span class="hint">расширения браузера</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="devMode">Dev mode</label>
+            <select id="devMode">
+              <option value="withDev">Были dev-задачи</option>
+              <option value="mailOnly">Dev-задач не было / mail-only</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="devHours">Dev hours</label>
+            <input id="devHours" type="number" min="0" step="0.5" value="12" />
+          </div>
+          <div class="field">
+            <label for="devPoints">Dev points</label>
+            <input id="devPoints" type="number" min="0" max="3" step="1" value="3" />
+          </div>
+          <div class="field">
+            <label for="devType">Dev task type</label>
+            <select id="devType">
+              <option>3 балла — новое полезное расширение</option>
+              <option>2 балла — крупная доработка текущего расширения</option>
+              <option>1 балл — средняя доработка / поддержка / фикс</option>
+              <option>Нет dev-задач</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="devComment">Dev comment</label>
+            <textarea id="devComment" placeholder="Например: новое расширение для контроля времени ответа / фикс бага / крупная доработка..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="card span-12">
+        <div class="card-head">
+          <h2>Calculated mail metrics</h2>
+          <span class="hint">автоматический пересчёт</span>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><span>Available work hours</span><strong id="availableHours">—</strong><small>рабочие дни × часы</small></div>
+          <div class="metric"><span>Mail hours</span><strong id="mailHours">—</strong><small>с учётом dev hours</small></div>
+          <div class="metric"><span>Mails per hour</span><strong id="mailsPerHour">—</strong><small>закрытые письма / часы почты</small></div>
+          <div class="metric"><span>Junior target</span><strong id="juniorMonthly">—</strong><small>с учётом часов почты</small></div>
+          <div class="metric"><span>Middle target</span><strong id="middleMonthly">—</strong><small>с учётом часов почты</small></div>
+          <div class="metric"><span>Senior target</span><strong id="seniorMonthly">—</strong><small>с учётом часов почты</small></div>
+        </div>
+      </div>
+
+      <div class="card span-6">
+        <div class="card-head">
+          <h2>Quality / error level</h2>
+          <span class="hint">штрафы и ручная проверка</span>
+        </div>
+        <div class="fields">
+          <div class="field">
+            <label for="minorMistakes">Minor mistakes</label>
+            <input id="minorMistakes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="mediumMistakes">Medium mistakes</label>
+            <input id="mediumMistakes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="criticalMistakes">Critical mistakes</label>
+            <input id="criticalMistakes" type="number" min="0" step="1" value="0" />
+          </div>
+          <div class="field">
+            <label for="severeFinancial">Severe financial mistake</label>
+            <select id="severeFinancial">
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="manualDowngrade">Manual downgrade</label>
+            <select id="manualDowngrade">
+              <option value="0">No downgrade</option>
+              <option value="1">-1 grade</option>
+              <option value="2">-2 grades</option>
+              <option value="3">No KPI</option>
+            </select>
+          </div>
+          <div class="field full">
+            <label for="qualityComment">Quality comment</label>
+            <textarea id="qualityComment" placeholder="Например: ошибка с ДР-бонусом при наличии реального баланса..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="span-6 result-card">
+        <div class="result-top">
+          <div>
+            <div class="label">Final monthly result</div>
+            <div class="grade" id="finalGrade">—</div>
+          </div>
+          <div class="bonus">
+            <span>KPI Bonus</span>
+            <strong id="finalBonus">—</strong>
+          </div>
+        </div>
+        <div class="reason" id="resultReason">Введите данные для расчёта.</div>
+        <div class="pill-row" id="resultPills"></div>
+        <div class="actions">
+          <button type="button" onclick="calculate()">Recalculate</button>
+          <button type="button" class="button-secondary" onclick="resetDemo()">Reset demo values</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">Test logic: base $700, KPI up to $300. All targets are editable.</p>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const num = (id, fallback = 0) => {
+      const value = parseFloat($(id).value);
+      return Number.isFinite(value) ? value : fallback;
+    };
+
+    const fmt = (value, digits = 0) => {
+      if (!Number.isFinite(value)) return '—';
+      return value.toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    };
+
+    function gradeIndexToName(index) {
+      return ['No KPI', 'Junior', 'Middle', 'Senior'][Math.max(0, Math.min(3, index))];
+    }
+
+    function gradeToBonus(index) {
+      return [0, 100, 200, 300][Math.max(0, Math.min(3, index))];
+    }
+
+    function calculate() {
+      const workingDays = num('workingDays');
+      const hoursPerDay = num('hoursPerDay', 8);
+      const vacationDays = num('vacationDays');
+      const sickDays = num('sickDays');
+      const availableDays = Math.max(0, workingDays - vacationDays - sickDays);
+      const availableHours = Math.max(0, availableDays * hoursPerDay);
+
+      const closedMails = num('closedMails');
+      const devHours = num('devHours');
+      const manualMailHoursRaw = $('manualMailHours').value.trim();
+      const manualMailHours = manualMailHoursRaw === '' ? null : num('manualMailHours');
+      const mailHours = Math.max(0, manualMailHours !== null ? manualMailHours : availableHours - devHours);
+      const mailsPerHour = mailHours > 0 ? closedMails / mailHours : 0;
+
+      const juniorDay = num('juniorTarget', 200);
+      const middleDay = num('middleTarget', 230);
+      const seniorDay = num('seniorTarget', 270);
+      const seniorMailOnlyDay = num('seniorMailOnlyTarget', 290);
+
+      const juniorHour = juniorDay / hoursPerDay;
+      const middleHour = middleDay / hoursPerDay;
+      const seniorHour = seniorDay / hoursPerDay;
+      const seniorMailOnlyHour = seniorMailOnlyDay / hoursPerDay;
+
+      const juniorMonthly = juniorHour * mailHours;
+      const middleMonthly = middleHour * mailHours;
+      const seniorMonthly = seniorHour * mailHours;
+      const seniorMailOnlyMonthly = seniorMailOnlyHour * mailHours;
+
+      const devMode = $('devMode').value;
+      const devPoints = Math.min(3, Math.max(0, num('devPoints')));
+      const minor = num('minorMistakes');
+      const medium = num('mediumMistakes');
+      const critical = num('criticalMistakes');
+      const severeFinancial = $('severeFinancial').value === 'yes';
+      const manualDowngrade = parseInt($('manualDowngrade').value, 10);
+
+      let gradeIndex = 0;
+      let reason = '';
+      let flags = [];
+
+      if (devMode === 'mailOnly') {
+        if (closedMails >= seniorMailOnlyMonthly && mailHours > 0) {
+          gradeIndex = 3;
+          reason = `Senior mail-only: закрыто ${fmt(closedMails)} писем при target ${fmt(seniorMailOnlyMonthly)}. Dev-задач не было, поэтому применён усиленный почтовый target.`;
+        } else if (closedMails >= middleMonthly && mailHours > 0) {
+          gradeIndex = 2;
+          reason = `Middle: закрыто ${fmt(closedMails)} писем при Middle target ${fmt(middleMonthly)}. До Senior mail-only target ${fmt(seniorMailOnlyMonthly)} не дотянул.`;
+        } else if (closedMails >= juniorMonthly && mailHours > 0) {
+          gradeIndex = 1;
+          reason = `Junior: закрыто ${fmt(closedMails)} писем при Junior target ${fmt(juniorMonthly)}.`;
+        } else {
+          reason = `No KPI: закрыто ${fmt(closedMails)} писем, это ниже Junior target ${fmt(juniorMonthly)}.`;
+        }
+      } else {
+        if (closedMails >= seniorMonthly && devPoints >= 3 && mailHours > 0) {
+          gradeIndex = 3;
+          reason = `Senior: выполнен Senior mail target ${fmt(seniorMonthly)} и набрано ${devPoints}/3 dev points.`;
+        } else if (closedMails >= middleMonthly && devPoints >= 1 && mailHours > 0) {
+          gradeIndex = 2;
+          reason = `Middle: выполнен Middle mail target ${fmt(middleMonthly)} и есть dev-вклад ${devPoints}/3 points.`;
+        } else if (closedMails >= juniorMonthly && mailHours > 0) {
+          gradeIndex = 1;
+          reason = `Junior: выполнен Junior mail target ${fmt(juniorMonthly)}. Для более высокого грейда не хватает почты и/или dev points.`;
+        } else {
+          reason = `No KPI: закрыто ${fmt(closedMails)} писем, это ниже Junior target ${fmt(juniorMonthly)}.`;
+        }
+      }
+
+      if (medium >= 3 && gradeIndex > 0) {
+        gradeIndex -= 1;
+        flags.push('3+ medium mistakes: снижение на 1 грейд');
+      } else if (medium >= 2) {
+        flags.push('2 medium mistakes: нужна ручная проверка');
+      }
+
+      if (critical >= 1) {
+        flags.push('Critical mistake: обязательная ручная проверка');
+        if (gradeIndex === 3) gradeIndex = 2;
+      }
+
+      if (critical >= 2 && gradeIndex > 0) {
+        gradeIndex = Math.min(gradeIndex, 1);
+        flags.push('2+ critical mistakes: максимум Junior или ручное решение');
+      }
+
+      if (severeFinancial) {
+        if (gradeIndex === 3) gradeIndex = 2;
+        flags.push('Severe financial mistake: Senior недоступен автоматически');
+      }
+
+      if (manualDowngrade === 3) {
+        gradeIndex = 0;
+        flags.push('Manual decision: No KPI');
+      } else if (manualDowngrade > 0) {
+        gradeIndex = Math.max(0, gradeIndex - manualDowngrade);
+        flags.push(`Manual downgrade: -${manualDowngrade} grade`);
+      }
+
+      const bonus = gradeToBonus(gradeIndex);
+      const grade = gradeIndexToName(gradeIndex);
+
+      $('availableHours').textContent = `${fmt(availableHours)} h`;
+      $('mailHours').textContent = `${fmt(mailHours, 1)} h`;
+      $('mailsPerHour').textContent = fmt(mailsPerHour, 2);
+      $('juniorMonthly').textContent = fmt(juniorMonthly);
+      $('middleMonthly').textContent = fmt(middleMonthly);
+      $('seniorMonthly').textContent = fmt(seniorMonthly);
+
+      $('hourTargets').innerHTML = `
+        <span class="pill">Junior: ${fmt(juniorHour, 2)} mails/h</span>
+        <span class="pill">Middle: ${fmt(middleHour, 2)} mails/h</span>
+        <span class="pill">Senior: ${fmt(seniorHour, 2)} mails/h</span>
+        <span class="pill">Senior mail-only: ${fmt(seniorMailOnlyHour, 2)} mails/h</span>
+      `;
+
+      $('finalGrade').textContent = grade;
+      $('finalGrade').className = `grade ${gradeIndex === 3 ? 'good' : gradeIndex === 2 ? 'accent' : gradeIndex === 1 ? 'warn' : 'bad'}`;
+      $('finalBonus').textContent = `$${bonus}`;
+      $('resultReason').textContent = flags.length ? `${reason} ${flags.join('. ')}.` : reason;
+
+      $('resultPills').innerHTML = `
+        <span class="pill">Closed: ${fmt(closedMails)}</span>
+        <span class="pill">Mail hours: ${fmt(mailHours, 1)}</span>
+        <span class="pill">Speed: ${fmt(mailsPerHour, 2)} mails/h</span>
+        <span class="pill">Dev: ${devPoints}/3 points</span>
+        <span class="pill">Minor/Medium/Critical: ${minor}/${medium}/${critical}</span>
+      `;
+    }
+
+    function resetDemo() {
+      $('workingDays').value = 22;
+      $('hoursPerDay').value = 8;
+      $('vacationDays').value = 0;
+      $('sickDays').value = 0;
+      $('juniorTarget').value = 200;
+      $('middleTarget').value = 230;
+      $('seniorTarget').value = 270;
+      $('seniorMailOnlyTarget').value = 290;
+      $('closedMails').value = 5600;
+      $('manualMailHours').value = '';
+      $('devMode').value = 'withDev';
+      $('devHours').value = 12;
+      $('devPoints').value = 3;
+      $('minorMistakes').value = 0;
+      $('mediumMistakes').value = 0;
+      $('criticalMistakes').value = 0;
+      $('severeFinancial').value = 'no';
+      $('manualDowngrade').value = 0;
+      calculate();
+    }
+
+    document.querySelectorAll('input, select, textarea').forEach((el) => {
+      el.addEventListener('input', calculate);
+      el.addEventListener('change', calculate);
+    });
+
+    calculate();
+  </script>
+</body>
+</html>
